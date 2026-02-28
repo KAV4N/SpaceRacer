@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<scene tag="SpaceRacer">
+
+  <assets>
+    <template id="spaceship_tmpl" src="@/assets/objects/spaceShip/spaceship.gltf"/>
+    <template id="ground_tmpl"    src="@/assets/objects/ground/ground.fbx"/>
+    <model id="rock1_tmpl"     src="@/assets/objects/rocks/rock1.obj"/>
+    <model id="rock6_tmpl"     src="@/assets/objects/rocks/rock6.gltf"/>
+    <template id="coin_tmpl"      src="@/assets/objects/coin/coin.gltf"/>
+
+    <model id="rock2_model" src="@/assets/objects/rocks/rock2.obj"/>
+    <model id="rock3_model" src="@/assets/objects/rocks/rock3.obj"/>
+    <model id="rock4_model" src="@/assets/objects/rocks/rock4.gltf"/>
+    <model id="rock5_model" src="@/assets/objects/rocks/rock5.gltf"/>
+    <model id="box_model"   src="@/assets/objects/box/box.obj"/>
+
+    <texture id="coin_tex" src="@/assets/textures/coin/Material_baseColor.png"/>
+
+    <audio id="ambient_audio"    src="@/assets/sounds/ambient.mp3"/>
+    <audio id="game_music_audio" src="@/assets/sounds/gameMusic.mp3"/>
+    <audio id="shot_audio"       src="@/assets/sounds/shot.mp3"/>
+
+    <cubeMap id="mountain_sky" src="@/assets/textures/skyboxes/mountain"/>
+  </assets>
+
+  <skybox cubeMap="mountain_sky"/>
+  <sun color="255,240,200" intensity="2" rotation="-45,-30,0" shadows="true"/>
+  <fog start="80" end="400" density="0.008" color="140,155,175"/>
+
+  <entities>
+
+    <entity tag="AmbientMusic">
+      <components>
+        <audiosource audio="ambient_audio" loop="true" volume="0.45"/>
+      </components>
+    </entity>
+
+    <entity tag="GameMusic">
+      <components>
+        <audiosource audio="game_music_audio" loop="false" volume="0.8"/>
+      </components>
+    </entity>
+
+    <entity tag="ShotSound">
+      <components>
+        <audiosource audio="shot_audio" loop="false" volume="1.0"/>
+      </components>
+    </entity>
+
+    <entity tag="Spaceship" template="spaceship_tmpl" position="0,10,0" scale="0.1,0.1,0.1">
+      <components>
+        <physics anchored="true" collide="true"/>
+        <audiolistener/>
+        
+        <logic>
+          <script type="SpaceshipController"/>
+        </logic>
+      </components>
+    </entity>
+
+    <entity tag="MainCamera">
+      <components>
+        <camera fov="75" near="0.1" far="500"/>
+        <logic>
+          <script type="CameraFollow"/>
+        </logic>
+      </components>
+    </entity>
+
+    <entity tag="GameManager">
+      <components>
+        <logic>
+          <script type="GameManager"/>
+          <script type="LevelGenerator"/>
+        </logic>
+      </components>
+    </entity>
+
+    <entity tag="ScoreText" active="false">
+      <components>
+        <text text="Score: 0" color="255,255,255" x="0.05" y="0.05" pivot="0,0"/>
+      </components>
+    </entity>
+
+    <entity tag="LivesText" active="false">
+      <components>
+        <text text="Lives: 3" color="255,255,255" x="0.05" y="0.12" pivot="0,0"/>
+      </components>
+    </entity>
+
+    <entity tag="PressSpaceText">
+      <components>
+        <text text="Press SPACE to Play" color="255,220,50" x="0.5" y="0.5" pivot="0.5,0.5"/>
+      </components>
+    </entity>
+
+    <entity tag="EndText" active="false">
+      <components>
+        <text text="" color="255,100,100" x="0.5" y="0.42" pivot="0.5,0.5"/>
+      </components>
+    </entity>
+
+    <entity tag="EndScoreText" active="false">
+      <components>
+        <text text="" color="255,255,255" x="0.5" y="0.54" pivot="0.5,0.5"/>
+      </components>
+    </entity>
+
+  </entities>
+
+</scene>

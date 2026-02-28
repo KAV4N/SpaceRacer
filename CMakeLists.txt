@@ -16,7 +16,7 @@ else()
     )
 endif()
 
-option(STRIKE_COLLISION_DEBUG_EXPERIMENTAL "Collision debug" OFF)
+option(STRIKE_COLLISION_DEBUG_EXPERIMENTAL "Collision debug" ON)
 
 add_subdirectory(StrikeEngine/StrikeEngine)
 

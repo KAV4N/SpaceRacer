@@ -6,16 +6,17 @@
   <entities>
     <entity tag="Top_Material" position="0.000,0.000,0.000" rotation="90.000,-0.000,0.000" scale="1.000,1.000,1.000">
       <components>
-        <renderer model="coin" mesh="0" color="255,255,255" />
+        <renderer model="coin" mesh="0" color="255,255,0" />
       </components>
       <entity tag="Bottom_Material" position="0.000,0.000,0.000" rotation="0.000,-0.000,0.000" scale="1.000,1.000,1.000">
         <components>
-          <renderer model="coin" mesh="1" color="255,255,255" />
+          <renderer model="coin" mesh="1" color="255,255,0" />
         </components>
       </entity>
       <entity tag="Centre_Material" position="0.000,0.000,0.000" rotation="0.000,-0.000,0.000" scale="1.000,1.000,1.000">
         <components>
-          <renderer model="coin" mesh="2" color="255,255,255" />
+          <light color="255,255,0" intensity="8" radius="100.0" fallOff="25"/>
+          <renderer model="coin" mesh="2" color="255,255,0" />
         </components>
       </entity>
     </entity>

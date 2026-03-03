@@ -4,14 +4,13 @@
   <assets>
     <template id="spaceship_tmpl" src="@/assets/objects/spaceShip/spaceship.gltf"/>
     <template id="ground_tmpl"    src="@/assets/objects/ground/ground.fbx"/>
-    <model id="rock1_tmpl"     src="@/assets/objects/rocks/rock1.obj"/>
-    <model id="rock6_tmpl"     src="@/assets/objects/rocks/rock6.gltf"/>
     <template id="coin_tmpl"      src="@/assets/objects/coin/coin.gltf"/>
 
     <model id="rock2_model" src="@/assets/objects/rocks/rock2.obj"/>
     <model id="rock3_model" src="@/assets/objects/rocks/rock3.obj"/>
     <model id="rock4_model" src="@/assets/objects/rocks/rock4.gltf"/>
     <model id="rock5_model" src="@/assets/objects/rocks/rock5.gltf"/>
+    <model id="rock1_model"     src="@/assets/objects/rocks/rock1.obj"/>
     <model id="box_model"   src="@/assets/objects/box/box.obj"/>
 
     <texture id="coin_tex" src="@/assets/textures/coin/Material_baseColor.png"/>
@@ -29,12 +28,14 @@
 
   <entities>
 
+    <!-- Ambient plays immediately, looping forever -->
     <entity tag="AmbientMusic">
       <components>
         <audiosource audio="ambient_audio" loop="true" volume="0.45"/>
       </components>
     </entity>
 
+    <!-- Game music is started/stopped by GameManager -->
     <entity tag="GameMusic">
       <components>
         <audiosource audio="game_music_audio" loop="false" volume="0.8"/>
@@ -47,14 +48,11 @@
       </components>
     </entity>
 
+    <!-- No SpaceshipController here — GameManager adds it at runtime via addScript<>() -->
     <entity tag="Spaceship" template="spaceship_tmpl" position="0,10,0" scale="0.1,0.1,0.1">
       <components>
         <physics anchored="true" collide="true"/>
         <audiolistener/>
-        
-        <logic>
-          <script type="SpaceshipController"/>
-        </logic>
       </components>
     </entity>
 
@@ -67,11 +65,15 @@
       </components>
     </entity>
 
+    <!--
+      GameManager initialises first and enables LevelGenerator on play.
+      LevelGenerator starts inactive — GameManager activates it via setActive(true).
+    -->
     <entity tag="GameManager">
       <components>
         <logic>
           <script type="GameManager"/>
-          <script type="LevelGenerator"/>
+          <script type="LevelGenerator" active="false"/>
         </logic>
       </components>
     </entity>

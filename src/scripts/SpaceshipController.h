@@ -7,18 +7,18 @@ public:
     void onUpdate(float deltaTime) override;
 
 private:
-    float mFwdSpeed  = 30.0f;
-    float mTurnSpeed = 30.0f;
-    const float kMaxX = 50.0f;
+    const float kMaxX = 60.0f;
 
     float mCurrentTilt        = 0.0f;
     const float kMaxTiltAngle = 25.0f;
     const float kTiltSpeed    = 8.0f;
 
-    float mHoverTime            = 0.0f;
-    const float kHoverAmplitude = 0.4f;
-    const float kHoverFrequency = 1.5f;
+    float mCurrentSpeed      = 60.0f;
+    const float kMinSpeed    = 60.0f;
+    const float kMaxSpeed    = 125.0f;
+    const float kAccelRate   = 0.5f;
 
-    float mBaseY            = 0.0f;
-    bool  mBaseYInitialized = false;
+    float mCurrentTurnSpeed  = 50.0f;
+    const float kMinTurnSpeed = 50.0f;
+    const float kMaxTurnSpeed = 120.0f;
 };

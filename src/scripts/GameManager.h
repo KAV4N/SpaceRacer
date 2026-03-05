@@ -1,47 +1,29 @@
 #pragma once
 #include "StrikeEngine.h"
-#include "SpaceshipController.h"
-#include "LevelGenerator.h"
-
-enum class GameState {
-    Menu,
-    Playing
-};
-
-static constexpr const char* kKeyLives = "lives";
-static constexpr const char* kKeyState = "state";
-static constexpr const char* kKeyScore = "score";
 
 class GameManager : public Strike::Script {
 public:
-    void onStart()  override;
+    void onStart()               override;
     void onUpdate(float deltaTime) override;
-    void onEvent(Strike::Event& event) override;
-
-    GameState getState() const {
-        return static_cast<GameState>(Strike::GameData::get().getInt(kKeyState));
-    }
 
     Strike::Entity getLivesTextEntity() const { return mLivesText; }
+    Strike::Entity getScoreTextEntity() const { return mScoreText; }
+
+    float getRawAmplitude() const { return mRawAmplitude; }
 
     void notifyGameOver();
 
 private:
-    void enterMenu();
-    void enterPlaying();
-    void hardReset();
+    void initGameData();
+    void updateHUD();
+    void saveHighScore();
 
     Strike::Entity mScoreText;
     Strike::Entity mLivesText;
-    Strike::Entity mPressSpaceText;
-    Strike::Entity mEndText;
-    Strike::Entity mEndScoreText;
-
+    Strike::Entity mGameOverText;
+    Strike::Entity mFinalScoreText;
     Strike::Entity mAmbientMusic;
     Strike::Entity mGameMusic;
 
-    Strike::Entity mSpaceship;
-    Strike::Entity mGameManagerEntity;
-
-    bool mSpaceWasPressed = false;
+    float mRawAmplitude = 0.0f;
 };

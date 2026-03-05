@@ -1,16 +1,13 @@
 #include "CameraFollow.h"
 
 void CameraFollow::onStart() {
-    mSpaceshipEntity = scriptEntity.getScene()->getEntity("Spaceship");
+    mSpaceship = scriptEntity.getScene()->getEntity("Spaceship");
 }
 
 void CameraFollow::onUpdate(float deltaTime) {
-    if (!mSpaceshipEntity.isValid()) return;
+    if (!mSpaceship.isValid()) return;
 
-    glm::vec3 shipPos   = mSpaceshipEntity.getWorldPosition();
-    glm::vec3 targetPos = shipPos + mOffset;
-
-    scriptEntity.setWorldPosition(targetPos);
+    scriptEntity.setWorldPosition(mSpaceship.getWorldPosition() + mOffset);
 }
 
 REGISTER_SCRIPT(CameraFollow)

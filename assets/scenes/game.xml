@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<scene tag="SpaceRacer">
+<scene tag="Game">
 
   <assets>
     <template id="spaceship_tmpl" src="@/assets/objects/spaceShip/spaceship.gltf"/>
     <template id="ground_tmpl"    src="@/assets/objects/ground/ground.fbx"/>
     <template id="coin_tmpl"      src="@/assets/objects/coin/coin.gltf"/>
 
+    <model id="rock1_model" src="@/assets/objects/rocks/rock1.obj"/>
     <model id="rock2_model" src="@/assets/objects/rocks/rock2.obj"/>
     <model id="rock3_model" src="@/assets/objects/rocks/rock3.obj"/>
     <model id="rock4_model" src="@/assets/objects/rocks/rock4.gltf"/>
     <model id="rock5_model" src="@/assets/objects/rocks/rock5.gltf"/>
-    <model id="rock1_model"     src="@/assets/objects/rocks/rock1.obj"/>
     <model id="box_model"   src="@/assets/objects/box/box.obj"/>
 
     <texture id="coin_tex" src="@/assets/textures/coin/Material_baseColor.png"/>
@@ -28,14 +28,12 @@
 
   <entities>
 
-    <!-- Ambient plays immediately, looping forever -->
     <entity tag="AmbientMusic">
       <components>
         <audiosource audio="ambient_audio" loop="true" volume="0.45"/>
       </components>
     </entity>
 
-    <!-- Game music is started/stopped by GameManager -->
     <entity tag="GameMusic">
       <components>
         <audiosource audio="game_music_audio" loop="false" volume="0.8"/>
@@ -52,61 +50,58 @@
       <components>
         <camera fov="75" near="0.1" far="500"/>
         <logic>
-         
-           <script type="CameraFollow"/>
+          <script type="CameraFollow"/>
         </logic>
       </components>
     </entity>
-
 
     <entity tag="Spaceship" template="spaceship_tmpl" position="0,10,0" rotation="90,0,180" scale="0.1,0.1,0.1">
       <components>
         <physics anchored="true" collide="true"/>
         <audiolistener/>
         <logic>
+          <script type="SpaceshipController"/>
           <script type="DamageScript"/>
+          <script type="CollectCoin"/>
         </logic>
       </components>
     </entity>
 
-    <!--
-      GameManager initialises first and enables LevelGenerator on play.
-      LevelGenerator starts inactive — GameManager activates it via setActive(true).
-    -->
+    <entity tag="LevelGeneratorEntity">
+      <components>
+        <logic>
+          <script type="LevelGenerator"/>
+        </logic>
+      </components>
+    </entity>
+
     <entity tag="GameManager">
       <components>
         <logic>
           <script type="GameManager"/>
-          <script type="LevelGenerator" active="false"/>
         </logic>
       </components>
     </entity>
 
-    <entity tag="ScoreText" active="false">
+    <entity tag="ScoreText">
       <components>
         <text text="Score: 0" color="255,255,255" x="0.05" y="0.05" pivot="0,0"/>
       </components>
     </entity>
 
-    <entity tag="LivesText" active="false">
+    <entity tag="LivesText">
       <components>
-        <text text="Lives: 3" color="255,255,255" x="0.05" y="0.12" pivot="0,0"/>
+        <text text="HP: 50" color="255,255,255" x="0.05" y="0.12" pivot="0,0"/>
       </components>
     </entity>
 
-    <entity tag="PressSpaceText">
-      <components>
-        <text text="Press SPACE to Play" color="255,220,50" x="0.5" y="0.5" pivot="0.5,0.5"/>
-      </components>
-    </entity>
-
-    <entity tag="EndText" active="false">
+    <entity tag="GameOverText" active="false">
       <components>
         <text text="" color="255,100,100" x="0.5" y="0.42" pivot="0.5,0.5"/>
       </components>
     </entity>
 
-    <entity tag="EndScoreText" active="false">
+    <entity tag="FinalScoreText" active="false">
       <components>
         <text text="" color="255,255,255" x="0.5" y="0.54" pivot="0.5,0.5"/>
       </components>

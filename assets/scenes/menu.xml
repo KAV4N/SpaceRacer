@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<scene tag="Menu">
+
+  <assets>
+    <template id="spaceship_tmpl" src="@/assets/objects/spaceShip/spaceship.gltf"/>
+    <audio    id="ambient_audio"  src="@/assets/sounds/ambient.mp3"/>
+    <cubeMap  id="mountain_sky"   src="@/assets/textures/skyboxes/mountain"/>
+  </assets>
+
+  <skybox cubeMap="mountain_sky"/>
+  <sun color="255,240,200" intensity="2" rotation="-45,-30,0" shadows="true"/>
+  <fog start="80" end="400" density="0.008" color="140,155,175"/>
+
+  <entities>
+
+    <entity tag="AmbientMusic">
+      <components>
+        <audiosource audio="ambient_audio" loop="true" volume="0.45"/>
+      </components>
+    </entity>
+
+    <entity tag="MenuCamera" position="0,10,20">
+      <components>
+        <camera fov="75" near="0.1" far="500"/>
+      </components>
+    </entity>
+
+    <entity tag="Spaceship" template="spaceship_tmpl" position="0,10,0" rotation="90,0,180" scale="0.1,0.1,0.1">
+    </entity>
+
+    <entity tag="TitleText">
+      <components>
+        <text text="SPACE RACER" color="255,220,50" x="0.5" y="0.35" pivot="0.5,0.5"/>
+      </components>
+    </entity>
+
+    <entity tag="PressSpaceText">
+      <components>
+        <text text="Press SPACE to Play" color="255,255,255" x="0.5" y="0.52" pivot="0.5,0.5"/>
+      </components>
+    </entity>
+
+    <entity tag="HighScoreText">
+      <components>
+        <text text="Best: 0" color="180,220,255" x="0.5" y="0.62" pivot="0.5,0.5"/>
+      </components>
+    </entity>
+
+    <entity tag="MenuManager">
+      <components>
+        <logic>
+          <script type="MenuManager"/>
+        </logic>
+      </components>
+    </entity>
+
+  </entities>
+
+</scene>

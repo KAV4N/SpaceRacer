@@ -1,77 +1,76 @@
 #include "SpaceshipController.h"
-#include "DamageScript.h"
+#include "GameManager.h"
 
 void SpaceshipController::onStart() {
-    mCurrentTilt      = 0.0f;
-    mCurrentSpeed     = kMinSpeed;
-    mCurrentTurnSpeed = kMinTurnSpeed;
+    mCurrentTilt = 0.0f;
+
+    glm::vec3 pos = scriptEntity.getWorldPosition();
+    scriptEntity.setWorldPosition(glm::vec3(pos.x, 10.0f, pos.z));
 
     auto model = Strike::AssetManager::get().getAsset<Strike::Model>("spaceship");
-    if (model && model->isReady()) {
-        Strike::PhysicsComponent& physics = scriptEntity.getComponent<Strike::PhysicsComponent>();
-        Strike::Bounds bounds = model->getBounds();
+    if (!model || !model->isReady()) return;
 
-        glm::vec3 scale    = scriptEntity.getWorldScale();
-        glm::quat rot      = scriptEntity.getWorldRotation();
-        glm::vec3 size     = bounds.getSize()     * scale;
-        glm::vec3 midPoint = rot * (bounds.getMidPoint() * scale);
+    auto& physics   = scriptEntity.getComponent<Strike::PhysicsComponent>();
+    glm::vec3 scale = scriptEntity.getWorldScale();
+    glm::quat rot   = scriptEntity.getWorldRotation();
+    Strike::Bounds bounds = model->getBounds();
 
-        physics.setSize(size);
-        physics.setCenter(midPoint + glm::vec3(0.0f, 0.0f, 1.6f));
+    glm::vec3 size     = bounds.getSize()     * scale;
+    glm::vec3 midPoint = rot * (bounds.getMidPoint() * scale);
+
+    physics.setSize(size);
+    physics.setCenter(midPoint + glm::vec3(0.0f, 0.0f, 1.6f));
+
+    Strike::Entity gmEntity = scriptEntity.getScene()->getEntity("GameManager");
+    if (gmEntity.isValid() && gmEntity.hasComponent<Strike::LogicComponent>()) {
+        mGameManager = gmEntity.getComponent<Strike::LogicComponent>()
+                               .getScript<GameManager>();
+    }
+
+    if (!mGameManager) {
+        STRIKE_WARN("SpaceshipController: GameManager not found");
     }
 }
 
 void SpaceshipController::onUpdate(float deltaTime) {
-    float t = (mCurrentSpeed - kMinSpeed) / (kMaxSpeed - kMinSpeed);
+    // Smooth the raw amplitude locally with own tuning params
+    if (mGameManager) {
+        float raw         = mGameManager->getRawAmplitude();
+        float smoothSpeed = (raw > mSmoothedAmplitude) ? mSmoothAttack : mSmoothRelease;
+        mSmoothedAmplitude = glm::mix(mSmoothedAmplitude, raw,
+                                      glm::clamp(smoothSpeed * deltaTime, 0.0f, 1.0f));
+    }
 
-    mCurrentSpeed     = glm::min(mCurrentSpeed + kAccelRate * deltaTime, kMaxSpeed);
-    mCurrentTurnSpeed = glm::mix(kMinTurnSpeed, kMaxTurnSpeed, t);
+    float t            = glm::clamp(mSmoothedAmplitude / glm::max(mPeakRMS, 0.001f), 0.0f, 1.0f);
+    float currentSpeed = glm::mix(mMinSpeed,     mMaxSpeed,     t);
+    float turnSpeed    = glm::mix(mMinTurnSpeed, mMaxTurnSpeed, t);
+    float tiltSpeed    = glm::mix(mMinTiltSpeed, mMaxTiltSpeed, t);
 
-    bool left  = Strike::Input::isKeyPressed(STRIKE_KEY_LEFT);
-    bool right = Strike::Input::isKeyPressed(STRIKE_KEY_RIGHT);
+    bool movingLeft  = Strike::Input::isKeyPressed(STRIKE_KEY_LEFT);
+    bool movingRight = Strike::Input::isKeyPressed(STRIKE_KEY_RIGHT);
 
     glm::vec3 pos = scriptEntity.getWorldPosition();
 
-    float finalTurn  = 0.0f;
+    float turnDelta  = 0.0f;
     float targetTilt = 0.0f;
 
-    if (left && pos.x > -kMaxX) {
-        finalTurn  = -mCurrentTurnSpeed;
+    if (movingLeft && pos.x > -kMaxX) {
+        turnDelta  = -turnSpeed;
         targetTilt =  kMaxTiltAngle;
-    }
-    else if (right && pos.x < kMaxX) {
-        finalTurn  =  mCurrentTurnSpeed;
+    } else if (movingRight && pos.x < kMaxX) {
+        turnDelta  =  turnSpeed;
         targetTilt = -kMaxTiltAngle;
     }
 
-    mCurrentTilt += (targetTilt - mCurrentTilt) * (kTiltSpeed * deltaTime);
+    mCurrentTilt += (targetTilt - mCurrentTilt) * (tiltSpeed * deltaTime);
 
-    DamageScript* dmg = nullptr;
-    if (scriptEntity.hasComponent<Strike::LogicComponent>()) {
-        dmg = scriptEntity.getComponent<Strike::LogicComponent>()
-                          .getScript<DamageScript>();
-    }
+    float newX = pos.x + (turnDelta    * deltaTime);
+    float newZ = pos.z - (currentSpeed * deltaTime);
 
-    bool isShaking = dmg && dmg->isShaking;
+    scriptEntity.setWorldPosition(glm::vec3(newX, scriptEntity.getWorldPosition().y, newZ));
 
-    float newX = pos.x + (finalTurn  * deltaTime);
-    float newZ = pos.z - (mCurrentSpeed * deltaTime);
-
-    if (!isShaking) {
-        scriptEntity.setWorldPosition(glm::vec3(newX, 10.0f, newZ));
-    } else {
-        // Advance X and Z but leave Y to DamageScript — update shakeBase so
-        // the shake offset stays relative to the ship's current travel position
-        dmg->shakeBase = glm::vec3(newX, 10.0f, newZ);
-        scriptEntity.setWorldPosition(glm::vec3(
-            newX,
-            scriptEntity.getWorldPosition().y,
-            newZ
-        ));
-    }
-
-    glm::vec3 currentRot = scriptEntity.getEulerAngles();
-    scriptEntity.setEulerAngles(glm::vec3(currentRot.x, currentRot.y, 180.f + mCurrentTilt));
+    glm::vec3 currentAngles = scriptEntity.getEulerAngles();
+    scriptEntity.setEulerAngles(glm::vec3(currentAngles.x, currentAngles.y, 180.0f + mCurrentTilt));
 }
 
 REGISTER_SCRIPT(SpaceshipController)

@@ -3,8 +3,8 @@
 
 class CollectCoin : public Strike::Script {
 public:
-    void onStart()          override;
-    void onUpdate(float dt) override;
+    void onStart() override;
+    void onUpdate(float deltaTime) override;
 
     int mScoreValue = 10;
 

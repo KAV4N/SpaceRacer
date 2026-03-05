@@ -1,24 +1,26 @@
 #include "CoinSpin.h"
 
 void CoinSpin::onStart() {
-    mTop = scriptEntity.getChildren()[0];
+    auto children = scriptEntity.getChildren();
+    if (children.empty()) return;
 
-    auto children = mTop.getChildren();
-    for (auto& child : children) {
-        const std::string& tag = child.getTag();
-        if (tag == "Bottom_Material") mBottom = child;
-        else if (tag == "Centre_Material") mCentre = child;
+    mTop = children[0];
+
+    for (auto& child : mTop.getChildren()) {
+        if (child.getTag() == "Centre_Material") {
+            mCentre = child;
+            break;
+        }
     }
 }
 
-void CoinSpin::onUpdate(float dt) {
-    // Top rotates around its own Y axis
+void CoinSpin::onUpdate(float deltaTime) {
     if (mTop.isValid()) {
-        mTop.rotate(glm::vec3(0.0f, mTopSpeed * dt, 0.0f));
+        mTop.rotate(glm::vec3(0.0f, mTopSpeed * deltaTime, 0.0f));
     }
-    // Centre spins the opposite direction, faster
+
     if (mCentre.isValid()) {
-        mCentre.rotate(glm::vec3(0.0f, mCentreSpeed * dt, 0.0f));
+        mCentre.rotate(glm::vec3(0.0f, mCentreSpeed * deltaTime, 0.0f));
     }
 }
 

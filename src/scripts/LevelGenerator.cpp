@@ -1,10 +1,11 @@
 #include "LevelGenerator.h"
+#include "GameManager.h"
 #include "CoinSpin.h"
 
 float LevelGenerator::getSegmentLength() const {
     auto groundModel = Strike::AssetManager::get().getAsset<Strike::Model>("ground");
     if (groundModel && groundModel->isReady()) {
-        float sizeZ = groundModel->getBounds().getSize().z / 10.f;
+        float sizeZ = groundModel->getBounds().getSize().z / 10.0f;
         if (sizeZ > 0.0f) return sizeZ;
     }
     return 1.0f;
@@ -12,10 +13,15 @@ float LevelGenerator::getSegmentLength() const {
 
 void LevelGenerator::onStart() {
     mSpaceship = scriptEntity.getScene()->getEntity("Spaceship");
-    mGameMusic = scriptEntity.getScene()->getEntity("GameMusic");
 
-    if (!mGameMusic) {
-        STRIKE_WARN("LevelGenerator: could not find 'GameMusic' entity");
+    Strike::Entity gmEntity = scriptEntity.getScene()->getEntity("GameManager");
+    if (gmEntity.isValid() && gmEntity.hasComponent<Strike::LogicComponent>()) {
+        mGameManager = gmEntity.getComponent<Strike::LogicComponent>()
+                               .getScript<GameManager>();
+    }
+
+    if (!mGameManager) {
+        STRIKE_WARN("LevelGenerator: GameManager not found");
     }
 
     mSegmentLength = getSegmentLength();
@@ -36,7 +42,7 @@ void LevelGenerator::onUpdate(float deltaTime) {
 
     mSegmentLength = getSegmentLength();
 
-    float shipZ = mSpaceship.getWorldPosition().z;
+    float shipZ          = mSpaceship.getWorldPosition().z;
     float spawnThreshold = shipZ - kSpawnAhead;
 
     while (mNextSpawnZ > spawnThreshold) {
@@ -65,30 +71,20 @@ void LevelGenerator::onDestroy() {
     }
     mCoins.clear();
 
-    mRawAmplitude      = 0.0f;
     mSmoothedAmplitude = 0.0f;
     mNextSpawnZ        = 0.0f;
 }
 
-void LevelGenerator::updateObstacleReaction(float dt) {
-    if (!mGameMusic || mObstacles.empty()) return;
+void LevelGenerator::updateObstacleReaction(float deltaTime) {
+    if (!mGameManager || mObstacles.empty()) return;
 
-    mRawAmplitude = Strike::Application::get().getAudioAmplitude(mGameMusic);
+    // Read cached raw value from GameManager, smooth with own tuning params
+    float raw         = mGameManager->getRawAmplitude();
+    float smoothSpeed = (raw > mSmoothedAmplitude) ? mSmoothAttack : mSmoothRelease;
+    mSmoothedAmplitude = glm::mix(mSmoothedAmplitude, raw,
+                                  glm::clamp(smoothSpeed * deltaTime, 0.0f, 1.0f));
 
-    float speed = (mRawAmplitude > mSmoothedAmplitude)
-        ? mSmoothAttack
-        : mSmoothRelease;
-
-    mSmoothedAmplitude = glm::mix(
-        mSmoothedAmplitude,
-        mRawAmplitude,
-        glm::clamp(speed * dt, 0.0f, 1.0f)
-    );
-
-    float t = glm::clamp(
-        mSmoothedAmplitude / glm::max(mPeakRMS, 0.001f),
-        0.0f, 1.0f
-    );
+    float t = glm::clamp(mSmoothedAmplitude / glm::max(mPeakRMS, 0.001f), 0.0f, 1.0f);
 
     for (size_t i = 0; i < mObstacles.size(); ++i) {
         Strike::Entity& obs = mObstacles[i];
@@ -104,19 +100,18 @@ void LevelGenerator::spawnSegment(const glm::vec3& pos) {
     auto* scene = getEntity().getScene();
     if (!scene) return;
 
-    auto& assetMngr = Strike::AssetManager::get();
-    auto groundTmpl = assetMngr.getAsset<Strike::Template>("ground_tmpl");
-
+    auto groundTmpl = Strike::AssetManager::get().getAsset<Strike::Template>("ground_tmpl");
     if (groundTmpl && groundTmpl->isReady()) {
         Strike::Entity seg = scene->createEntity();
         seg.setTag("GroundSegment");
         groundTmpl->instantiate(seg);
         seg.setWorldPosition(pos);
 
-        int turns = s_dist(s_rng);
-        seg.setEulerAngles(glm::vec3(0.0f, static_cast<float>(turns * 90), 0.0f));
+        int   turns = s_rotSteps(s_rng);
+        float yRot  = static_cast<float>(turns * 90);
+        seg.setEulerAngles(glm::vec3(0.0f, yRot, 0.0f));
 
-        glm::vec3 scale(1.f);
+        glm::vec3 scale(1.0f);
         if (turns % 2 == 0) scale.x = 100.0f;
         else                 scale.z = 100.0f;
         seg.setScale(scale);
@@ -125,18 +120,21 @@ void LevelGenerator::spawnSegment(const glm::vec3& pos) {
     }
 
     if (!mSuppressObstacles) {
-        spawnObstacleInGrid(pos);
-        spawnCoinInGrid(pos);
+        static std::uniform_int_distribution<int> s_spawnChoice{ 0, 1 };
+        if (s_spawnChoice(s_rng) == 0)
+            spawnObstacleInGrid(pos);
+        else
+            spawnCoinInGrid(pos);
     }
 }
 
 Strike::Entity LevelGenerator::spawnRockFromModel(const char* modelId, const glm::vec3& pos,
-                                                   float yRot,
-                                                   float desiredSizeX, float desiredSizeZ,
-                                                   float desiredSizeY)
-{
+                                                   float desiredSizeY) {
     auto* scene = getEntity().getScene();
     if (!scene) return Strike::Entity{};
+
+    float cellWidth = kLaneWidth     / static_cast<float>(kGridCols);
+    float cellDepth = mSegmentLength / static_cast<float>(kGridRows);
 
     Strike::Entity rock = scene->createEntity();
     rock.setTag("Obstacle");
@@ -149,43 +147,52 @@ Strike::Entity LevelGenerator::spawnRockFromModel(const char* modelId, const glm
     glm::vec3 scale(1.0f);
     if (model && model->isReady()) {
         glm::vec3 boundsSize = model->getBounds().getSize();
-
-        float xFactor = (boundsSize.x > 0.0f) ? (desiredSizeX / boundsSize.x) : 1.0f;
-        float zFactor = (boundsSize.z > 0.0f) ? (desiredSizeZ / boundsSize.z) : 1.0f;
-        float yFactor = (boundsSize.y > 0.0f) ? (desiredSizeY / boundsSize.y) : 1.0f;
-
-        scale = glm::vec3(xFactor, yFactor, zFactor);
+        scale.x = (boundsSize.x > 0.0f) ? (cellWidth / boundsSize.x) : 1.0f;
+        scale.z = (boundsSize.z > 0.0f) ? (cellDepth / boundsSize.z) : 1.0f;
+        scale.y = (boundsSize.y > 0.0f) ? (desiredSizeY / boundsSize.y) : 1.0f;
     }
 
     static std::uniform_int_distribution<int> s_blueDist(100, 255);
     static std::uniform_int_distribution<int> s_dimDist(0, 60);
 
-    int r = s_dimDist(s_rng);
-    int g = s_dimDist(s_rng);
-    int b = s_blueDist(s_rng);
-    renderer.setColor(glm::vec3(r, g, b));
+    renderer.setColor(glm::vec3(s_dimDist(s_rng), s_dimDist(s_rng), s_blueDist(s_rng)));
 
     rock.setWorldPosition(pos);
-    rock.setEulerAngles(glm::vec3(0.0f, yRot, 0.0f));
     rock.setScale(scale);
 
     return rock;
 }
 
-void LevelGenerator::spawnObstacleInGrid(const glm::vec3& segmentPos) {
-    float yRot   = s_yRot(s_rng);
-    float scaleY = s_yScale(s_rng);
+glm::vec3 LevelGenerator::randomCellPosition(const glm::vec3& segmentPos) const {
+    float cellWidth = kLaneWidth     / static_cast<float>(kGridCols);
+    float cellDepth = mSegmentLength / static_cast<float>(kGridRows);
 
-    glm::vec3 pos = calculateCell(segmentPos);
+    std::uniform_int_distribution<int> colDist(0, kGridCols - 1);
+    std::uniform_int_distribution<int> rowDist(0, kGridRows - 1);
+
+    int col = colDist(s_rng);
+    int row = rowDist(s_rng);
+
+    float x = -kLaneWidth * 0.5f + (col + 0.5f) * cellWidth;
+    float z =  segmentPos.z - (row + 0.5f) * cellDepth;
+
+    return glm::vec3(x, 0.0f, z);
+}
+
+void LevelGenerator::spawnObstacleInGrid(const glm::vec3& segmentPos) {
+    float     scaleY = s_yScale(s_rng);
+    glm::vec3 pos    = randomCellPosition(segmentPos);
 
     int variant = s_rockVariant(s_rng);
-    Strike::Entity rock{};
+
+    Strike::Entity rock;
     switch (variant) {
-        case 0: rock = spawnRockFromModel("rock1_model", pos, yRot, 33.f, 2.5f, scaleY); break;
-        case 2: rock = spawnRockFromModel("rock2_model", pos, yRot, 33.f, 2.5f, scaleY); break;
-        case 3: rock = spawnRockFromModel("rock3_model", pos, yRot, 33.f, 2.5f, scaleY); break;
-        case 4: rock = spawnRockFromModel("rock4_model", pos, yRot, 33.f, 2.5f, scaleY); break;
-        case 5: rock = spawnRockFromModel("rock5_model", pos, yRot, 33.f, 2.5f, scaleY); break;
+        case 1: rock = spawnRockFromModel("rock1_model", pos, scaleY); break;
+        case 2: rock = spawnRockFromModel("rock2_model", pos, scaleY); break;
+        case 3: rock = spawnRockFromModel("rock3_model", pos, scaleY); break;
+        case 4: rock = spawnRockFromModel("rock4_model", pos, scaleY); break;
+        case 5: rock = spawnRockFromModel("rock5_model", pos, scaleY); break;
+        default: return;
     }
 
     if (!rock.isValid()) return;
@@ -198,21 +205,6 @@ void LevelGenerator::spawnObstacleInGrid(const glm::vec3& segmentPos) {
     mObstacles.push_back(rock);
 }
 
-glm::vec3 LevelGenerator::calculateCell(const glm::vec3& pos) const {
-    float cellWidth = kLaneWidth     / static_cast<float>(kGridCols);
-    float cellDepth = mSegmentLength / static_cast<float>(kGridRows);
-
-    std::uniform_int_distribution<int> colDist(0, kGridCols - 1);
-    std::uniform_int_distribution<int> rowDist(0, kGridRows - 1);
-
-    int col = colDist(s_rng);
-    int row = rowDist(s_rng);
-
-    float x = -kLaneWidth * 0.5f + (col + 0.5f) * cellWidth;
-    float z =  pos.z - (row + 0.5f) * cellDepth;
-    return glm::vec3(x, 0, z);
-}
-
 void LevelGenerator::spawnCoinInGrid(const glm::vec3& segmentPos) {
     auto* scene = getEntity().getScene();
     if (!scene) return;
@@ -222,20 +214,23 @@ void LevelGenerator::spawnCoinInGrid(const glm::vec3& segmentPos) {
 
     Strike::Entity coin = scene->createEntity();
     coin.setTag("Coin");
-    if (coinTmpl->instantiate(coin)) {
-        glm::vec3 pos = calculateCell(segmentPos);
-        coin.setWorldPosition(glm::vec3(pos.x, 10.f, pos.z));
-        coin.setScale(glm::vec3(0.1f));
 
-        auto& physics = coin.addComponent<Strike::PhysicsComponent>();
-        glm::vec3 size = Strike::AssetManager::get().getAsset<Strike::Model>("coin")->getBounds().getSize();
+    if (!coinTmpl->instantiate(coin)) return;
+
+    glm::vec3 pos = randomCellPosition(segmentPos);
+    coin.setWorldPosition(glm::vec3(pos.x, 10.0f, pos.z));
+    coin.setScale(glm::vec3(0.1f));
+
+    auto coinModel = Strike::AssetManager::get().getAsset<Strike::Model>("coin");
+    if (coinModel && coinModel->isReady()) {
+        auto& physics  = coin.addComponent<Strike::PhysicsComponent>();
+        glm::vec3 size = coinModel->getBounds().getSize();
         physics.setSize(glm::vec3(size.x, size.z, size.y) * 0.1f);
         physics.setAnchored(true);
         physics.setCanCollide(true);
-
-        auto& logic = coin.getOrAddComponent<Strike::LogicComponent>();
-        logic.addScript<CoinSpin>();
     }
+
+    coin.getOrAddComponent<Strike::LogicComponent>().addScript<CoinSpin>();
 
     mCoins.push_back(coin);
 }
@@ -243,20 +238,23 @@ void LevelGenerator::spawnCoinInGrid(const glm::vec3& segmentPos) {
 void LevelGenerator::cleanupBehindShip() {
     if (!mSpaceship.isValid()) return;
 
-    float shipZ = mSpaceship.getWorldPosition().z;
-    float destroyThreshold = shipZ + kDestroyBehind;
+    float destroyThreshold = mSpaceship.getWorldPosition().z + kDestroyBehind;
 
-    while (!mSegments.empty()) {
-        Strike::Entity& seg = mSegments.front();
-        if (!seg.isValid()) {
-            mSegments.erase(mSegments.begin());
-            continue;
+    auto destroyFront = [&](std::vector<Strike::Entity>& list) {
+        while (!list.empty()) {
+            Strike::Entity& entity = list.front();
+            if (!entity.isValid()) {
+                list.erase(list.begin());
+                continue;
+            }
+            if (entity.getWorldPosition().z < destroyThreshold) break;
+            entity.destroy();
+            list.erase(list.begin());
         }
-        if (seg.getWorldPosition().z >= destroyThreshold) {
-            seg.destroy();
-            mSegments.erase(mSegments.begin());
-        } else { break; }
-    }
+    };
+
+    destroyFront(mSegments);
+    destroyFront(mCoins);
 
     while (!mObstacles.empty()) {
         Strike::Entity& obs = mObstacles.front();
@@ -265,23 +263,10 @@ void LevelGenerator::cleanupBehindShip() {
             mObstacleBaseScaleY.erase(mObstacleBaseScaleY.begin());
             continue;
         }
-        if (obs.getWorldPosition().z >= destroyThreshold) {
-            obs.destroy();
-            mObstacles.erase(mObstacles.begin());
-            mObstacleBaseScaleY.erase(mObstacleBaseScaleY.begin());
-        } else { break; }
-    }
-
-    while (!mCoins.empty()) {
-        Strike::Entity& coin = mCoins.front();
-        if (!coin.isValid()) {
-            mCoins.erase(mCoins.begin());
-            continue;
-        }
-        if (coin.getWorldPosition().z >= destroyThreshold) {
-            coin.destroy();
-            mCoins.erase(mCoins.begin());
-        } else { break; }
+        if (obs.getWorldPosition().z < destroyThreshold) break;
+        obs.destroy();
+        mObstacles.erase(mObstacles.begin());
+        mObstacleBaseScaleY.erase(mObstacleBaseScaleY.begin());
     }
 }
 

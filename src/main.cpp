@@ -12,7 +12,7 @@ int main(int argc, char** argv) {
     window.setSize(1280, 720);
     //window.setVSync(true);
 
-    Strike::World::get().loadScene("assets/scenes/game.xml");
+    Strike::World::get().loadScene("assets/scenes/menu.xml");
 
     app.run();
 

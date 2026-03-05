@@ -7,6 +7,6 @@ public:
     void onUpdate(float deltaTime) override;
 
 private:
-    Strike::Entity mSpaceshipEntity;
-    glm::vec3 mOffset     = glm::vec3(0.0f, 8.0f, 20.0f);
+    Strike::Entity mSpaceship;
+    glm::vec3      mOffset = glm::vec3(0.0f, 8.0f, 20.0f);
 };

@@ -1,141 +1,95 @@
 #include "GameManager.h"
-#include "DamageScript.h"
-#include "CollectCoin.h"
-
-static void setAudioPlaying(Strike::Entity& entity, bool play) {
-    if (!entity.isValid()) return;
-    if (!entity.hasComponent<Strike::AudioSourceComponent>()) return;
-    auto& src = entity.getComponent<Strike::AudioSourceComponent>();
-    if (play) src.play();
-    else      src.stop();
-}
 
 void GameManager::onStart() {
     auto* scene = getEntity().getScene();
 
     mScoreText      = scene->getEntity("ScoreText");
     mLivesText      = scene->getEntity("LivesText");
-    mPressSpaceText = scene->getEntity("PressSpaceText");
-    mEndText        = scene->getEntity("EndText");
-    mEndScoreText   = scene->getEntity("EndScoreText");
+    mGameOverText   = scene->getEntity("GameOverText");
+    mFinalScoreText = scene->getEntity("FinalScoreText");
+    mAmbientMusic   = scene->getEntity("AmbientMusic");
+    mGameMusic      = scene->getEntity("GameMusic");
 
-    mAmbientMusic = scene->getEntity("AmbientMusic");
-    mGameMusic    = scene->getEntity("GameMusic");
+    initGameData();
 
-    mSpaceship         = scene->getEntity("Spaceship");
-    mGameManagerEntity = scene->getEntity("GameManager");
+    if (mAmbientMusic.isValid() && mAmbientMusic.hasComponent<Strike::AudioSourceComponent>()) {
+        mAmbientMusic.getComponent<Strike::AudioSourceComponent>().play();
+    }
 
-    setAudioPlaying(mAmbientMusic, true);
+    if (mGameMusic.isValid() && mGameMusic.hasComponent<Strike::AudioSourceComponent>()) {
+        mGameMusic.getComponent<Strike::AudioSourceComponent>().play();
+    }
 
-    enterMenu();
+    updateHUD();
 }
 
 void GameManager::onUpdate(float deltaTime) {
-    auto& window = Strike::Application::get().getWindow();
-    window.setWindowTitle("FPS: " + std::to_string(Strike::Application::get().getCurrentFPS()));
+    // Single audio read per frame - all consumers pull getRawAmplitude() and smooth locally
+    if (mGameMusic.isValid()) {
+        mRawAmplitude = Strike::Application::get().getAudioAmplitude(mGameMusic);
+    }
+
+    Strike::Application::get().getWindow()
+        .setWindowTitle("FPS: " + std::to_string(
+            static_cast<int>(Strike::Application::get().getCurrentFPS())));
 }
 
-void GameManager::onEvent(Strike::Event& event) {
-    if (event.getEventType() != Strike::EventType::KeyPressed) return;
-    auto& e = static_cast<Strike::KeyPressedEvent&>(event);
-    if (e.getKeyCode() == STRIKE_KEY_SPACE && getState() == GameState::Menu) {
-        enterPlaying();
+void GameManager::initGameData() {
+    auto& data = Strike::GameData::get();
+    data.setInt("lives", 50);
+    data.setInt("score", 0);
+
+    if (!data.hasKey("bestScore")) {
+        data.setInt("bestScore", 0);
+    }
+}
+
+void GameManager::updateHUD() {
+    auto& data = Strike::GameData::get();
+
+    if (mScoreText.isValid() && mScoreText.hasComponent<Strike::TextComponent>()) {
+        mScoreText.getComponent<Strike::TextComponent>()
+                  .setText("Score: " + std::to_string(data.getInt("score")));
+    }
+
+    if (mLivesText.isValid() && mLivesText.hasComponent<Strike::TextComponent>()) {
+        mLivesText.getComponent<Strike::TextComponent>()
+                  .setText("HP: " + std::to_string(data.getInt("lives")));
+    }
+}
+
+void GameManager::saveHighScore() {
+    auto& data = Strike::GameData::get();
+    int score  = data.getInt("score");
+    int best   = data.hasKey("bestScore") ? data.getInt("bestScore") : 0;
+
+    if (score > best) {
+        data.setInt("bestScore", score);
     }
 }
 
 void GameManager::notifyGameOver() {
-    hardReset();
-    enterMenu();
-}
+    saveHighScore();
 
-void GameManager::hardReset() {
-    setAudioPlaying(mGameMusic, false);
+    auto& data     = Strike::GameData::get();
+    int finalScore = data.getInt("score");
 
-    auto& data = Strike::GameData::get();
-    data.setInt(kKeyState, static_cast<int>(GameState::Menu));
-    data.setInt(kKeyLives, 30);
-    data.setInt(kKeyScore, 0);
-
-    if (mSpaceship.isValid() && mSpaceship.hasComponent<Strike::LogicComponent>()) {
-        auto& logic = mSpaceship.getComponent<Strike::LogicComponent>();
-
-        if (logic.hasScript<SpaceshipController>()) {
-            logic.removeScript<SpaceshipController>();
-        }
-
-        if (logic.hasScript<DamageScript>()) {
-            logic.removeScript<DamageScript>();
-        }
+    if (mGameMusic.isValid() && mGameMusic.hasComponent<Strike::AudioSourceComponent>()) {
+        mGameMusic.getComponent<Strike::AudioSourceComponent>().stop();
     }
 
-    if (mGameManagerEntity.isValid() && mGameManagerEntity.hasComponent<Strike::LogicComponent>()) {
-        auto& logic = mGameManagerEntity.getComponent<Strike::LogicComponent>();
-
-        if (logic.hasScript<LevelGenerator>()) {
-            logic.removeScript<LevelGenerator>();
-            logic.addScript<LevelGenerator>();
-        }
-
-        auto* gen = logic.getScript<LevelGenerator>();
-        if (gen) gen->setActive(false);
-    }
-}
-
-void GameManager::enterMenu() {
-    auto& data = Strike::GameData::get();
-    data.setInt(kKeyState, static_cast<int>(GameState::Menu));
-    data.setInt(kKeyLives, 30);
-    data.setInt(kKeyScore, 0);
-
-    if (mPressSpaceText.isValid()) mPressSpaceText.setActive(true);
-    if (mScoreText.isValid())      mScoreText.setActive(false);
-    if (mLivesText.isValid())      mLivesText.setActive(false);
-    if (mEndText.isValid())        mEndText.setActive(false);
-    if (mEndScoreText.isValid())   mEndScoreText.setActive(false);
-}
-
-void GameManager::enterPlaying() {
-    auto& data = Strike::GameData::get();
-    data.setInt(kKeyState, static_cast<int>(GameState::Playing));
-    data.setInt(kKeyLives, 30);
-    data.setInt(kKeyScore, 0);
-
-    if (mPressSpaceText.isValid()) mPressSpaceText.setActive(false);
-    if (mScoreText.isValid()) {
-        mScoreText.setActive(true);
-        mScoreText.getComponent<Strike::TextComponent>().setText("Score: 0");
-    }
-    if (mLivesText.isValid()) {
-        mLivesText.setActive(true);
-        mLivesText.getComponent<Strike::TextComponent>()
-                  .setText("Lives: " + std::to_string(data.getInt(kKeyLives)));
-    }
-    if (mEndText.isValid())      mEndText.setActive(false);
-    if (mEndScoreText.isValid()) mEndScoreText.setActive(false);
-
-    if (mSpaceship.isValid()) {
-        auto& logic = mSpaceship.getOrAddComponent<Strike::LogicComponent>();
-
-        if (!logic.hasScript<SpaceshipController>()) {
-            logic.addScript<SpaceshipController>();
-        }
-
-        if (!logic.hasScript<DamageScript>()) {
-            logic.addScript<DamageScript>();
-        }
-
-        if (!logic.hasScript<CollectCoin>()) {
-            logic.addScript<CollectCoin>();
-        }
+    if (mGameOverText.isValid()) {
+        mGameOverText.setActive(true);
+        mGameOverText.getComponent<Strike::TextComponent>().setText("GAME OVER");
     }
 
-    if (mGameManagerEntity.isValid() && mGameManagerEntity.hasComponent<Strike::LogicComponent>()) {
-        auto& logic = mGameManagerEntity.getComponent<Strike::LogicComponent>();
-        auto* gen = logic.getScript<LevelGenerator>();
-        if (gen) gen->setActive(true);
+    if (mFinalScoreText.isValid()) {
+        mFinalScoreText.setActive(true);
+        mFinalScoreText.getComponent<Strike::TextComponent>()
+                       .setText("Score: " + std::to_string(finalScore));
     }
 
-    setAudioPlaying(mGameMusic, true);
+    Strike::World::get().loadScene("assets/scenes/menu.xml", false);
 }
 
 REGISTER_SCRIPT(GameManager)

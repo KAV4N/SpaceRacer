@@ -3,22 +3,22 @@
 void CollectCoin::onStart() {
     mScoreText = getEntity().getScene()->getEntity("ScoreText");
 
-    if (!mScoreText) {
-        STRIKE_WARN("CollectCoin: could not find ScoreText entity");
+    if (!mScoreText.isValid()) {
+        STRIKE_WARN("CollectCoin: ScoreText entity not found");
     }
 }
 
-void CollectCoin::onUpdate(float dt) {
+void CollectCoin::onUpdate(float deltaTime) {
     for (auto& other : scriptEntity.getCollidingEntities()) {
-        if (!other.isValid()) continue;
-        if (other.getTag() != "Coin") continue;
+        if (!other.isValid() || other.getTag() != "Coin") continue;
+
+        auto& data  = Strike::GameData::get();
+        int newScore = data.getInt("score") + mScoreValue;
+        data.setInt("score", newScore);
 
         if (mScoreText.isValid() && mScoreText.hasComponent<Strike::TextComponent>()) {
-            auto& text = mScoreText.getComponent<Strike::TextComponent>();
-
-            int score = Strike::GameData::get().getInt("score");
-           
-            text.setText("Score: " + std::to_string(Strike::GameData::get().setInt("score", score+mScoreValue)));
+            mScoreText.getComponent<Strike::TextComponent>()
+                      .setText("Score: " + std::to_string(newScore));
         }
 
         other.destroy();

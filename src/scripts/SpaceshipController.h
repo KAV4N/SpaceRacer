@@ -18,7 +18,7 @@ private:
     const float kMaxSpeed    = 125.0f;
     const float kAccelRate   = 0.5f;
 
-    float mCurrentTurnSpeed  = 50.0f;
+    float mCurrentTurnSpeed   = 50.0f;
     const float kMinTurnSpeed = 50.0f;
     const float kMaxTurnSpeed = 120.0f;
 };

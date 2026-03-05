@@ -48,6 +48,28 @@ void LevelGenerator::onUpdate(float deltaTime) {
     cleanupBehindShip();
 }
 
+void LevelGenerator::onDestroy() {
+    for (auto& seg : mSegments) {
+        if (seg.isValid()) seg.destroy();
+    }
+    mSegments.clear();
+
+    for (auto& obs : mObstacles) {
+        if (obs.isValid()) obs.destroy();
+    }
+    mObstacles.clear();
+    mObstacleBaseScaleY.clear();
+
+    for (auto& coin : mCoins) {
+        if (coin.isValid()) coin.destroy();
+    }
+    mCoins.clear();
+
+    mRawAmplitude      = 0.0f;
+    mSmoothedAmplitude = 0.0f;
+    mNextSpawnZ        = 0.0f;
+}
+
 void LevelGenerator::updateObstacleReaction(float dt) {
     if (!mGameMusic || mObstacles.empty()) return;
 
@@ -103,8 +125,8 @@ void LevelGenerator::spawnSegment(const glm::vec3& pos) {
     }
 
     if (!mSuppressObstacles) {
-        spawnObstaclesInGrid(pos);
-        spawnCoinsInGrid(pos);
+        spawnObstacleInGrid(pos);
+        spawnCoinInGrid(pos);
     }
 }
 
@@ -150,36 +172,20 @@ Strike::Entity LevelGenerator::spawnRockFromModel(const char* modelId, const glm
     return rock;
 }
 
-void LevelGenerator::spawnObstaclesInGrid(const glm::vec3& segmentPos) {
-    float cellWidth = kLaneWidth     / static_cast<float>(kGridCols);
-    float cellDepth = mSegmentLength / static_cast<float>(kGridRows);
-
-    static constexpr float kCellPadding = 2.0f;
-    float obstacleWidth = cellWidth - kCellPadding * 2.0f;
-    float obstacleDepth = cellDepth - kCellPadding * 2.0f;
-
-    std::uniform_int_distribution<int> colDist(0, kGridCols - 1);
-    std::uniform_int_distribution<int> rowDist(0, kGridRows - 1);
-
-    int col = colDist(s_rng);
-    int row = rowDist(s_rng);
-
-    float x = -kLaneWidth * 0.5f + (col + 0.5f) * cellWidth;
-    float z = segmentPos.z - (row + 0.5f) * cellDepth;
-
+void LevelGenerator::spawnObstacleInGrid(const glm::vec3& segmentPos) {
     float yRot   = s_yRot(s_rng);
     float scaleY = s_yScale(s_rng);
 
-    glm::vec3 pos(x, kRockY, z);
+    glm::vec3 pos = calculateCell(segmentPos);
 
     int variant = s_rockVariant(s_rng);
     Strike::Entity rock{};
     switch (variant) {
-        case 0: rock = spawnRockFromModel("rock1_model", pos, yRot, obstacleWidth, obstacleDepth, scaleY); break;
-        case 2: rock = spawnRockFromModel("rock2_model", pos, yRot, obstacleWidth, obstacleDepth, scaleY); break;
-        case 3: rock = spawnRockFromModel("rock3_model", pos, yRot, obstacleWidth, obstacleDepth, scaleY); break;
-        case 4: rock = spawnRockFromModel("rock4_model", pos, yRot, obstacleWidth, obstacleDepth, scaleY); break;
-        case 5: rock = spawnRockFromModel("rock5_model", pos, yRot, obstacleWidth, obstacleDepth, scaleY); break;
+        case 0: rock = spawnRockFromModel("rock1_model", pos, yRot, 33.f, 2.5f, scaleY); break;
+        case 2: rock = spawnRockFromModel("rock2_model", pos, yRot, 33.f, 2.5f, scaleY); break;
+        case 3: rock = spawnRockFromModel("rock3_model", pos, yRot, 33.f, 2.5f, scaleY); break;
+        case 4: rock = spawnRockFromModel("rock4_model", pos, yRot, 33.f, 2.5f, scaleY); break;
+        case 5: rock = spawnRockFromModel("rock5_model", pos, yRot, 33.f, 2.5f, scaleY); break;
     }
 
     if (!rock.isValid()) return;
@@ -192,46 +198,46 @@ void LevelGenerator::spawnObstaclesInGrid(const glm::vec3& segmentPos) {
     mObstacles.push_back(rock);
 }
 
-void LevelGenerator::spawnCoinsInGrid(const glm::vec3& segmentPos) {
-    auto* scene = getEntity().getScene();
-    if (!scene) return;
-
-    auto coinTmpl = Strike::AssetManager::get().getAsset<Strike::Template>("coin_tmpl");
-    if (!coinTmpl || !coinTmpl->isReady()) return;
-
+glm::vec3 LevelGenerator::calculateCell(const glm::vec3& pos) const {
     float cellWidth = kLaneWidth     / static_cast<float>(kGridCols);
     float cellDepth = mSegmentLength / static_cast<float>(kGridRows);
 
     std::uniform_int_distribution<int> colDist(0, kGridCols - 1);
     std::uniform_int_distribution<int> rowDist(0, kGridRows - 1);
 
-    for (int i = 0; i < kCoinsPerSegment; ++i) {
-        int col = colDist(s_rng);
-        int row = rowDist(s_rng);
+    int col = colDist(s_rng);
+    int row = rowDist(s_rng);
 
-        float x = -kLaneWidth * 0.5f + (col + 0.5f) * cellWidth;
-        float z = segmentPos.z - (row + 0.5f) * cellDepth;
+    float x = -kLaneWidth * 0.5f + (col + 0.5f) * cellWidth;
+    float z =  pos.z - (row + 0.5f) * cellDepth;
+    return glm::vec3(x, 0, z);
+}
 
-        Strike::Entity coin = scene->createEntity();
-        coin.setTag("Coin");
-        if (coinTmpl->instantiate(coin)){
-            coin.setWorldPosition(glm::vec3(x, kCoinY, z));
-            coin.setScale(glm::vec3(0.1f));  // adjust to match your scene scale
+void LevelGenerator::spawnCoinInGrid(const glm::vec3& segmentPos) {
+    auto* scene = getEntity().getScene();
+    if (!scene) return;
 
-            auto& physics = coin.addComponent<Strike::PhysicsComponent>();
-            glm::vec3 size = Strike::AssetManager::get().getAsset<Strike::Model>("coin")->getBounds().getSize();
-            physics.setSize(glm::vec3(size.x, size.z, size.y) * 0.1f);
-            physics.setAnchored(true);
-            physics.setCanCollide(true);
+    auto coinTmpl = Strike::AssetManager::get().getAsset<Strike::Template>("coin_tmpl");
+    if (!coinTmpl || !coinTmpl->isReady()) return;
 
-            // Attach CoinSpin to the root — onStart finds children by tag
-            auto& logic = coin.getOrAddComponent<Strike::LogicComponent>();
-            logic.addScript<CoinSpin>();
+    Strike::Entity coin = scene->createEntity();
+    coin.setTag("Coin");
+    if (coinTmpl->instantiate(coin)) {
+        glm::vec3 pos = calculateCell(segmentPos);
+        coin.setWorldPosition(glm::vec3(pos.x, 10.f, pos.z));
+        coin.setScale(glm::vec3(0.1f));
 
+        auto& physics = coin.addComponent<Strike::PhysicsComponent>();
+        glm::vec3 size = Strike::AssetManager::get().getAsset<Strike::Model>("coin")->getBounds().getSize();
+        physics.setSize(glm::vec3(size.x, size.z, size.y) * 0.1f);
+        physics.setAnchored(true);
+        physics.setCanCollide(true);
 
-        }
-        mCoins.push_back(coin);
+        auto& logic = coin.getOrAddComponent<Strike::LogicComponent>();
+        logic.addScript<CoinSpin>();
     }
+
+    mCoins.push_back(coin);
 }
 
 void LevelGenerator::cleanupBehindShip() {

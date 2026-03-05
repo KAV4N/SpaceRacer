@@ -8,39 +8,40 @@ enum class GameState {
     Playing
 };
 
-// GameData keys
 static constexpr const char* kKeyLives = "lives";
-static constexpr const char* kKeyState = "state";  // 0 = Menu, 1 = Playing
+static constexpr const char* kKeyState = "state";
+static constexpr const char* kKeyScore = "score";
 
 class GameManager : public Strike::Script {
 public:
     void onStart()  override;
     void onUpdate(float deltaTime) override;
+    void onEvent(Strike::Event& event) override;
 
     GameState getState() const {
-        return static_cast<GameState>(Strike::GameData::get().getInt(kKeyState, 0));
+        return static_cast<GameState>(Strike::GameData::get().getInt(kKeyState));
     }
+
+    Strike::Entity getLivesTextEntity() const { return mLivesText; }
+
+    void notifyGameOver();
 
 private:
     void enterMenu();
     void enterPlaying();
+    void hardReset();
 
-    // UI entities
     Strike::Entity mScoreText;
     Strike::Entity mLivesText;
     Strike::Entity mPressSpaceText;
     Strike::Entity mEndText;
     Strike::Entity mEndScoreText;
 
-    // Audio entities
     Strike::Entity mAmbientMusic;
     Strike::Entity mGameMusic;
 
-    // Gameplay entities
     Strike::Entity mSpaceship;
     Strike::Entity mGameManagerEntity;
-
-    int mScore = 0;
 
     bool mSpaceWasPressed = false;
 };

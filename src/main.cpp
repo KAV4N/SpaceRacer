@@ -10,7 +10,7 @@ int main(int argc, char** argv) {
     Strike::Window& window = app.getWindow();
     window.setWindowTitle("SpaceRacer");
     window.setSize(1280, 720);
-    window.setVSync(true);
+    //window.setVSync(true);
 
     Strike::World::get().loadScene("assets/scenes/game.xml");
 

@@ -48,19 +48,23 @@
       </components>
     </entity>
 
-    <!-- No SpaceshipController here — GameManager adds it at runtime via addScript<>() -->
-    <entity tag="Spaceship" template="spaceship_tmpl" position="0,10,0" scale="0.1,0.1,0.1">
-      <components>
-        <physics anchored="true" collide="true"/>
-        <audiolistener/>
-      </components>
-    </entity>
-
     <entity tag="MainCamera">
       <components>
         <camera fov="75" near="0.1" far="500"/>
         <logic>
-          <script type="CameraFollow"/>
+         
+           <script type="CameraFollow"/>
+        </logic>
+      </components>
+    </entity>
+
+
+    <entity tag="Spaceship" template="spaceship_tmpl" position="0,10,0" rotation="90,0,180" scale="0.1,0.1,0.1">
+      <components>
+        <physics anchored="true" collide="true"/>
+        <audiolistener/>
+        <logic>
+          <script type="DamageScript"/>
         </logic>
       </components>
     </entity>

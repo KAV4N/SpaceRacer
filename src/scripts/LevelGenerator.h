@@ -4,10 +4,10 @@
 
 class LevelGenerator : public Strike::Script {
 public:
-    void onStart() override;
+    void onStart()               override;
     void onUpdate(float deltaTime) override;
+    void onDestroy()             override;
 
-    // Audio reactor tuning
     float mMaxYMultiplier = 3.0f;
     float mPeakRMS        = 0.6f;
     float mSmoothAttack   = 100.0f;
@@ -15,8 +15,8 @@ public:
 
 private:
     void spawnSegment(const glm::vec3& pos);
-    void spawnObstaclesInGrid(const glm::vec3& segmentPos);
-    void spawnCoinsInGrid(const glm::vec3& segmentPos);
+    void spawnObstacleInGrid(const glm::vec3& segmentPos);
+    void spawnCoinInGrid(const glm::vec3& segmentPos);
     void cleanupBehindShip();
     float getSegmentLength() const;
 
@@ -25,26 +25,25 @@ private:
                                       float scaleX, float scaleZ, float scaleY);
 
     void updateObstacleReaction(float dt);
+    glm::vec3 calculateCell(const glm::vec3& pos) const;
 
 private:
     Strike::Entity mSpaceship;
     Strike::Entity mGameMusic;
 
-    static constexpr float kSpawnAhead    = 500.0f;
-    static constexpr float kDestroyBehind =  20.0f;
-    static constexpr float kLaneWidth     = 150.0f;
-    static constexpr float kRockY         =   0.0f;
-    static constexpr float kCoinY         =  10.0f;  // hover height above ground
-    static constexpr int   kGridCols      =     4;
-    static constexpr int   kGridRows      =     4;
-    static constexpr float kRockYMin      =  25.0f;
-    static constexpr float kRockYMax      =  45.0f;
+    static constexpr float kSpawnAhead      = 500.0f;
+    static constexpr float kDestroyBehind   =  20.0f;
+    static constexpr float kLaneWidth       = 150.0f;
+    static constexpr float kRockY           =   0.0f;
+    static constexpr float kCoinY           =  10.0f;
+    static constexpr int   kGridCols        =     4;
+    static constexpr int   kGridRows        =     4;
+    static constexpr float kRockYMin        =  25.0f;
+    static constexpr float kRockYMax        =  45.0f;
+    static constexpr int   kCoinsPerSegment =     3;
 
-    // How many coins to scatter per segment
-    static constexpr int   kCoinsPerSegment = 3;
-
-    float mSegmentLength = 1.0f;
-    float mNextSpawnZ    = 0.0f;
+    float mSegmentLength     = 1.0f;
+    float mNextSpawnZ        = 0.0f;
     bool  mSuppressObstacles = false;
 
     std::vector<float>          mObstacleBaseScaleY;

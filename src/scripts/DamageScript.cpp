@@ -54,7 +54,6 @@ void DamageScript::onUpdate(float deltaTime) {
         }
     }
 
-
     if (!mIsInvulnerable) return;
 
     if (tick(mBlinkInterval)) {
@@ -82,6 +81,10 @@ void DamageScript::applyDamage() {
         }
     }
 
+    if (hasComponent<Strike::AudioSourceComponent>()) {
+        getComponent<Strike::AudioSourceComponent>().play();
+    }
+
     if (lives <= 0) {
         restoreOriginalColors();
         if (mGameManager) {
@@ -90,7 +93,6 @@ void DamageScript::applyDamage() {
         return;
     }
 
-    // Capture position before any shake offset is applied
     mIsInvulnerable = true;
     mBlinkState     = false;
 }

@@ -3,6 +3,7 @@
 void MenuManager::onStart() {
     mAmbientMusic  = scriptEntity.getScene()->getEntity("AmbientMusic");
     mHighScoreText = scriptEntity.getScene()->getEntity("HighScoreText");
+    mResultText    = scriptEntity.getScene()->getEntity("ResultText");
 
     if (mAmbientMusic.isValid() && mAmbientMusic.hasComponent<Strike::AudioSourceComponent>()) {
         mAmbientMusic.getComponent<Strike::AudioSourceComponent>().play();
@@ -15,6 +16,15 @@ void MenuManager::onStart() {
         }
         mHighScoreText.getComponent<Strike::TextComponent>()
                       .setText("Best: " + std::to_string(best));
+    }
+
+    if (mResultText.isValid() && mResultText.hasComponent<Strike::TextComponent>()) {
+        bool playerWon = Strike::GameData::get().hasKey("playerWon") &&
+                         Strike::GameData::get().getBool("playerWon");
+
+        mResultText.getComponent<Strike::TextComponent>()
+                   .setText(playerWon ? "YOU WIN!" : "GAME OVER");
+        mResultText.setActive(true);
     }
 }
 

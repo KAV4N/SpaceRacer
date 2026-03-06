@@ -3,7 +3,7 @@
 
 class GameManager : public Strike::Script {
 public:
-    void onStart()               override;
+    void onStart()                 override;
     void onUpdate(float deltaTime) override;
 
     Strike::Entity getLivesTextEntity() const { return mLivesText; }
@@ -17,6 +17,7 @@ private:
     void initGameData();
     void updateHUD();
     void saveHighScore();
+    void notifyPlayerWon();
 
     Strike::Entity mScoreText;
     Strike::Entity mLivesText;
@@ -25,5 +26,9 @@ private:
     Strike::Entity mAmbientMusic;
     Strike::Entity mGameMusic;
 
-    float mRawAmplitude = 0.0f;
+    float mRawAmplitude      = 0.0f;
+    float mMusicDuration     = 0.0f;
+    float mMusicElapsed      = 0.0f;
+    bool  mGameMusicPlaying  = false;
+    bool  mGameEnded         = false;
 };

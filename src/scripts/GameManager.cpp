@@ -17,16 +17,35 @@ void GameManager::onStart() {
     }
 
     if (mGameMusic.isValid() && mGameMusic.hasComponent<Strike::AudioSourceComponent>()) {
-        mGameMusic.getComponent<Strike::AudioSourceComponent>().play();
+        auto& src = mGameMusic.getComponent<Strike::AudioSourceComponent>();
+        src.play();
+        mGameMusicPlaying = true;
+
+        // Cache the track duration so we can detect when it finishes
+        if (src.hasAudio() && src.getAudio() && src.getAudio()->isReady()) {
+            mMusicDuration = src.getAudio()->getDuration();
+        }
     }
 
     updateHUD();
 }
 
 void GameManager::onUpdate(float deltaTime) {
+    if (mGameEnded) return;
+
     // Single audio read per frame - all consumers pull getRawAmplitude() and smooth locally
     if (mGameMusic.isValid()) {
         mRawAmplitude = Strike::Application::get().getAudioAmplitude(mGameMusic);
+    }
+
+    // Track elapsed music time and detect when the non-looping track finishes
+    if (mGameMusicPlaying && mMusicDuration > 0.0f) {
+        mMusicElapsed += deltaTime;
+        if (mMusicElapsed >= mMusicDuration) {
+            mGameMusicPlaying = false;
+            notifyPlayerWon();
+            return;
+        }
     }
 
     Strike::Application::get().getWindow()
@@ -38,6 +57,7 @@ void GameManager::initGameData() {
     auto& data = Strike::GameData::get();
     data.setInt("lives", 50);
     data.setInt("score", 0);
+    data.setBool("playerWon", false);
 
     if (!data.hasKey("bestScore")) {
         data.setInt("bestScore", 0);
@@ -68,10 +88,38 @@ void GameManager::saveHighScore() {
     }
 }
 
+void GameManager::notifyPlayerWon() {
+    mGameEnded = true;
+
+    saveHighScore();
+
+    auto& data = Strike::GameData::get();
+    data.setBool("playerWon", true);
+
+    int finalScore = data.getInt("score");
+
+    if (mGameOverText.isValid()) {
+        mGameOverText.setActive(true);
+        mGameOverText.getComponent<Strike::TextComponent>().setText("YOU WIN!");
+    }
+
+    if (mFinalScoreText.isValid()) {
+        mFinalScoreText.setActive(true);
+        mFinalScoreText.getComponent<Strike::TextComponent>()
+                       .setText("Score: " + std::to_string(finalScore));
+    }
+
+    Strike::World::get().loadScene("assets/scenes/menu.xml", false);
+}
+
 void GameManager::notifyGameOver() {
+    if (mGameEnded) return;
+    mGameEnded = true;
+
     saveHighScore();
 
     auto& data     = Strike::GameData::get();
+    data.setBool("playerWon", false);
     int finalScore = data.getInt("score");
 
     if (mGameMusic.isValid() && mGameMusic.hasComponent<Strike::AudioSourceComponent>()) {

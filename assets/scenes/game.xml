@@ -18,12 +18,14 @@
     <audio id="ambient_audio"    src="@/assets/sounds/ambient.mp3"/>
     <audio id="game_music_audio" src="@/assets/sounds/gameMusic.mp3"/>
     <audio id="shot_audio"       src="@/assets/sounds/shot.mp3"/>
+    <audio id="damage_audio"       src="@/assets/sounds/damage.mp3"/>
+    <audio id="coin_audio"       src="@/assets/sounds/coinCollect.mp3"/>
 
     <cubeMap id="mountain_sky" src="@/assets/textures/skyboxes/mountain"/>
   </assets>
 
   <skybox cubeMap="mountain_sky"/>
-  <sun color="255,240,200" intensity="2" rotation="-45,-30,0" shadows="true"/>
+  <sun color="255,240,200" intensity="2" rotation="45,30,0" shadows="true"/>
   <fog start="80" end="400" density="0.008" color="140,155,175"/>
 
   <entities>
@@ -49,6 +51,7 @@
     <entity tag="MainCamera">
       <components>
         <camera fov="75" near="0.1" far="500"/>
+        <audiosource audio="coin_audio" loop="false" volume="0.2"/>
         <logic>
           <script type="CameraFollow"/>
         </logic>
@@ -59,6 +62,7 @@
       <components>
         <physics anchored="true" collide="true"/>
         <audiolistener/>
+        <audiosource audio="damage_audio" loop="false" volume="2.0"/>
         <logic>
           <script type="SpaceshipController"/>
           <script type="DamageScript"/>
@@ -71,6 +75,8 @@
       <components>
         <logic>
           <script type="LevelGenerator"/>
+          <script type="FogController"/>
+          <script type="SunController"/>
         </logic>
       </components>
     </entity>

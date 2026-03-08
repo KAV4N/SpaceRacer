@@ -6,13 +6,13 @@ static const struct {
     glm::uvec3 color;
     float      intensity;
 } kKeyframes[] = {
-    { 0.00f, {   0,   0,   0 }, 0.00f },   //   0° — pitch black, silence
-    { 0.40f, {  80,  20,   0 }, 0.03f },   //  52° — barely visible deep red
-    { 0.65f, { 180,  60,  10 }, 0.08f },   //  84° — faint blood orange glow
-    { 0.80f, { 255,  80,  20 }, 0.18f },   // 104° — sunrise color, still dim
-    { 0.90f, { 255, 160,  60 }, 0.45f },   // 117° — warm orange, getting loud
-    { 0.95f, { 255, 220, 120 }, 0.75f },   // 123° — golden, almost peak
-    { 1.00f, { 255, 255, 255 }, 1.00f },   // 130° — pure white noon, max volume
+    { 0.00f, {   0,   0,   0 }, 0.00f },   //   0° - pitch black, silence
+    { 0.40f, {  80,  20,   0 }, 0.03f },   //  52° - barely visible deep red
+    { 0.65f, { 180,  60,  10 }, 0.08f },   //  84° - faint blood orange glow
+    { 0.80f, { 255,  80,  20 }, 0.18f },   // 104° - sunrise color, still dim
+    { 0.90f, { 255, 160,  60 }, 0.45f },   // 117° - warm orange, getting loud
+    { 0.95f, { 255, 220, 120 }, 0.75f },   // 123° - golden, almost peak
+    { 1.00f, { 255, 255, 255 }, 1.00f },   // 130° - pure white noon, max volume
 };
 
 static constexpr int kKeyframeCount = 7;

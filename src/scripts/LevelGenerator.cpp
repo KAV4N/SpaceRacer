@@ -4,7 +4,7 @@
 
 float LevelGenerator::getSegmentLength() const {
     auto groundModel = Strike::AssetManager::get().getAsset<Strike::Model>("ground");
-    auto temp = Strike::AssetManager::get().load<Strike::Template>("ground", "assets/objects/box/box.obj");
+    //auto temp = Strike::AssetManager::get().load<Strike::Template>("ground", "assets/objects/box/box.obj");
     if (groundModel && groundModel->isReady()) {
         float sizeZ = groundModel->getBounds().getSize().z / 10.0f;
         if (sizeZ > 0.0f) return sizeZ;

@@ -1,0 +1,3 @@
+[submodule "StrikeEngine"]
+	path = StrikeEngine
+	url = https://github.com/KAV4N/StrikeEngine.git

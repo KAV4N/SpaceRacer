@@ -46,20 +46,6 @@ cd SpaceRacer
 
 ## Building the Game
 
-### Debug Build
-
-```bash
-cmake --preset x64-debug
-cmake --build out/build/x64-debug
-```
-
-### Release Build
-
-```bash
-cmake --preset x64-release
-cmake --build out/build/x64-release --config Release
-```
-
 The compiled executable will be placed at:
 
 ```

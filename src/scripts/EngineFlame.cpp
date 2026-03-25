@@ -34,8 +34,8 @@ void EngineFlame::onUpdate(float deltaTime) {
     mFlameTime   += deltaTime * kFlameSpeed;
     float scroll  = glm::fract(mFlameTime);
 
-    if (hasComponent<Strike::RendererComponent>()) {
-        getComponent<Strike::RendererComponent>().setColor(flameColor(scroll));
+    if (scriptEntity.hasComponent<Strike::RendererComponent>()) {
+        scriptEntity.getComponent<Strike::RendererComponent>().setColor(flameColor(scroll));
     }
 
     auto children = scriptEntity.getChildren();

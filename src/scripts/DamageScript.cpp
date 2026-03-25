@@ -81,8 +81,8 @@ void DamageScript::applyDamage() {
         }
     }
 
-    if (hasComponent<Strike::AudioSourceComponent>()) {
-        getComponent<Strike::AudioSourceComponent>().play();
+    if (scriptEntity.hasComponent<Strike::AudioSourceComponent>()) {
+        scriptEntity.getComponent<Strike::AudioSourceComponent>().play();
     }
 
     if (lives <= 0) {

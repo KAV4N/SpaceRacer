@@ -12,20 +12,24 @@ add_executable(${PROJECT_NAME})
 file(GLOB_RECURSE SOURCES "src/*.cpp" "src/*.h")
 target_sources(${PROJECT_NAME} PRIVATE ${SOURCES})
 
-target_compile_options(${PROJECT_NAME} PRIVATE
+
+add_compile_options(
     -Wall
     -Wextra
     -Wreorder
     -Wno-unknown-pragmas
     -Wno-deprecated-copy
     -Wno-unused-parameter
-    $<$<CONFIG:Debug>:-O0 -g>
-    $<$<CONFIG:Release>:-O3 -march=native -funroll-loops -ffast-math -flto>
 )
 
-target_link_options(${PROJECT_NAME} PRIVATE
-    $<$<CONFIG:Release>:-flto -Wl,-O1>
+add_compile_options(
+    $<$<CONFIG:Debug>:-O0>
+    $<$<CONFIG:Debug>:-g>
+    $<$<CONFIG:Release>:-O3>
+    $<$<CONFIG:Release>:-march=native>
+    $<$<CONFIG:Release>:-funroll-loops>
 )
+
 
 target_link_libraries(${PROJECT_NAME} PRIVATE StrikeEngine)
 

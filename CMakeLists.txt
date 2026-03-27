@@ -26,8 +26,6 @@ add_compile_options(
     $<$<CONFIG:Debug>:-O0>
     $<$<CONFIG:Debug>:-g>
     $<$<CONFIG:Release>:-O3>
-    $<$<CONFIG:Release>:-march=native>
-    $<$<CONFIG:Release>:-funroll-loops>
 )
 
 
